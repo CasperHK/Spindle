@@ -115,14 +115,12 @@ impl<const N: usize> QuantumRegister<N> {
     fn map_qubits<F>(self, f: F) -> Self 
     where F: Fn(Qubit) -> Qubit;
     
-    // Decompose the register into an owned array of qubits
-    fn decompose(self) -> [Qubit; N];
+    // Apply a multi-qubit operation to all qubits
+    fn apply<F>(self, f: F) -> Self
+    where F: Fn([Qubit; N]) -> [Qubit; N];
     
-    // Convert to array for multi-qubit operations
-    fn to_array(self) -> [Qubit; N];
-    
-    // Create from an array of qubits
-    fn from_array(qubits: [Qubit; N]) -> Self;
+    // Consume the register and extract the qubits as an array
+    fn into_qubits(self) -> [Qubit; N];
 }
 ```
 
@@ -171,25 +169,19 @@ fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> 
     let mut qubits = qubits;
     
     for _ in 0..iterations {
-        // Oracle application - convert to array, apply oracle, convert back
-        let array = qubits.to_array();
-        let array = oracle(array);
-        qubits = QuantumRegister::from_array(array);
+        // Oracle application
+        qubits = qubits.apply(oracle);
         
         // Diffusion operator
         qubits = qubits.map_qubits(hadamard);
         qubits = qubits.map_qubits(pauli_x);
-        
-        let array = qubits.to_array();
-        let array = multi_controlled_z(array);
-        qubits = QuantumRegister::from_array(array);
-        
+        qubits = qubits.apply(multi_controlled_z);
         qubits = qubits.map_qubits(pauli_x);
         qubits = qubits.map_qubits(hadamard);
     }
     
     // Measure result - destructure to extract first qubit
-    let [mut first_qubit, ..] = qubits.decompose();
+    let [mut first_qubit, ..] = qubits.into_qubits();
     measure(&mut first_qubit)
 }
 ```
