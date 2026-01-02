@@ -109,7 +109,7 @@ fn optimal_grover_iterations(n: usize) -> usize;
 ```rust
 impl<const N: usize> QuantumRegister<N> {
     // Create N independent qubits (no cloning involved)
-    fn new(n: usize) -> Self;
+    fn new() -> Self;
     
     // Apply a function to each qubit, consuming and returning the register
     fn map_qubits<F>(self, f: F) -> Self 
@@ -117,6 +117,12 @@ impl<const N: usize> QuantumRegister<N> {
     
     // Decompose the register into an owned array of qubits
     fn decompose(self) -> [Qubit; N];
+    
+    // Convert to array for multi-qubit operations
+    fn to_array(self) -> [Qubit; N];
+    
+    // Create from an array of qubits
+    fn from_array(qubits: [Qubit; N]) -> Self;
 }
 ```
 
@@ -157,7 +163,7 @@ fn quantum_teleportation(
 // Conceptual Spindle code showing ownership principles
 fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> ClassicalBit {
     // Initialize qubits in superposition - each qubit is independently created
-    let qubits = QuantumRegister::new(N);  // Creates N qubits without cloning
+    let qubits = QuantumRegister::<N>::new();  // Creates N qubits without cloning
     let qubits = qubits.map_qubits(hadamard);  // Consumes and returns transformed register
     
     // Apply Grover iterations
@@ -165,13 +171,19 @@ fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> 
     let mut qubits = qubits;
     
     for _ in 0..iterations {
-        // Oracle application
-        qubits = oracle(qubits);
+        // Oracle application - convert to array, apply oracle, convert back
+        let array = qubits.to_array();
+        let array = oracle(array);
+        qubits = QuantumRegister::from_array(array);
         
         // Diffusion operator
         qubits = qubits.map_qubits(hadamard);
         qubits = qubits.map_qubits(pauli_x);
-        qubits = multi_controlled_z(qubits);
+        
+        let array = qubits.to_array();
+        let array = multi_controlled_z(array);
+        qubits = QuantumRegister::from_array(array);
+        
         qubits = qubits.map_qubits(pauli_x);
         qubits = qubits.map_qubits(hadamard);
     }
