@@ -64,7 +64,7 @@ All quantum gates are represented as reversible functions. The type system ensur
 ```rust
 trait UnitaryGate {
     fn apply(self, q: Qubit) -> Qubit;
-    fn inverse(self) -> Self;
+    fn inverse(&self) -> Self;
 }
 ```
 
@@ -102,6 +102,22 @@ fn measure(q: &mut Qubit) -> ClassicalBit;
 
 // Utility functions
 fn optimal_grover_iterations(n: usize) -> usize;
+```
+
+### QuantumRegister API
+
+```rust
+impl<const N: usize> QuantumRegister<N> {
+    // Create N independent qubits (no cloning involved)
+    fn new(n: usize) -> Self;
+    
+    // Apply a function to each qubit, consuming and returning the register
+    fn map_qubits<F>(self, f: F) -> Self 
+    where F: Fn(Qubit) -> Qubit;
+    
+    // Decompose the register into an owned array of qubits
+    fn decompose(self) -> [Qubit; N];
+}
 ```
 
 ### Example: Quantum Teleportation
@@ -142,7 +158,7 @@ fn quantum_teleportation(
 fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> ClassicalBit {
     // Initialize qubits in superposition - each qubit is independently created
     let qubits = QuantumRegister::new(N);  // Creates N qubits without cloning
-    let qubits = qubits.apply_to_each(hadamard);  // Applies gate to each qubit in place
+    let qubits = qubits.map_qubits(hadamard);  // Consumes and returns transformed register
     
     // Apply Grover iterations
     let iterations = optimal_grover_iterations(N);
@@ -153,15 +169,15 @@ fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> 
         qubits = oracle(qubits);
         
         // Diffusion operator
-        qubits = qubits.apply_to_each(hadamard);
-        qubits = qubits.apply_to_each(pauli_x);
+        qubits = qubits.map_qubits(hadamard);
+        qubits = qubits.map_qubits(pauli_x);
         qubits = multi_controlled_z(qubits);
-        qubits = qubits.apply_to_each(pauli_x);
-        qubits = qubits.apply_to_each(hadamard);
+        qubits = qubits.map_qubits(pauli_x);
+        qubits = qubits.map_qubits(hadamard);
     }
     
     // Measure result - destructure to extract first qubit
-    let [mut first_qubit, ..] = qubits.into_array();
+    let [mut first_qubit, ..] = qubits.decompose();
     measure(&mut first_qubit)
 }
 ```
