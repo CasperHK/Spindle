@@ -70,6 +70,8 @@ trait UnitaryGate {
 
 ## Language Features
 
+**Note:** The code examples below demonstrate Spindle's design principles and syntax. Spindle is inspired by Rust but is its own language with quantum-specific features.
+
 ### Quantum Types
 
 - `Qubit`: A single quantum bit in superposition
@@ -79,6 +81,8 @@ trait UnitaryGate {
 - `QuantumCircuit`: A composable quantum computation
 
 ### Quantum Operations
+
+Spindle provides a standard library of quantum gates and operations:
 
 ```rust
 // Single-qubit gates
@@ -95,6 +99,9 @@ fn multi_controlled_z<const N: usize>(qubits: [Qubit; N]) -> [Qubit; N];
 
 // Measurement
 fn measure(q: &mut Qubit) -> ClassicalBit;
+
+// Utility functions
+fn optimal_grover_iterations(n: usize) -> usize;
 ```
 
 ### Example: Quantum Teleportation
@@ -131,19 +138,18 @@ fn quantum_teleportation(
 ### Example: Grover's Search Algorithm
 
 ```rust
-use std::f64::consts::PI;
-
+// Conceptual Spindle code showing ownership principles
 fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> ClassicalBit {
     // Initialize qubits in superposition
-    let qubits: [Qubit; N] = std::array::from_fn(|_| Qubit::new());
+    let qubits = [Qubit::new(); N];
     let qubits = qubits.map(hadamard);
     
     // Apply Grover iterations
-    let iterations = (PI / 4.0 * f64::sqrt(2_f64.powi(N as i32))).floor() as usize;
+    let iterations = optimal_grover_iterations(N);
     let mut qubits = qubits;
     
     for _ in 0..iterations {
-        // Oracle
+        // Oracle application
         qubits = oracle(qubits);
         
         // Diffusion operator
