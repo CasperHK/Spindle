@@ -131,9 +131,9 @@ fn quantum_teleportation(
 ### Example: Grover's Search Algorithm
 
 ```rust
-fn grovers_search<const N: usize>(oracle: impl Fn(&[Qubit; N]) -> [Qubit; N]) -> ClassicalBit 
+fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> ClassicalBit 
 where
-    [(); N - 1]: Sized  // Compile-time constraint: N must be at least 1
+    [Qubit; N]: Sized  // Ensure N is a valid size for array
 {
     // Initialize qubits in superposition
     let qubits: [Qubit; N] = std::array::from_fn(|_| Qubit::new());
@@ -145,7 +145,7 @@ where
     
     for _ in 0..iterations {
         // Oracle
-        qubits = oracle(&qubits);
+        qubits = oracle(qubits);
         
         // Diffusion operator
         qubits = qubits.map(hadamard);
@@ -155,8 +155,8 @@ where
         qubits = qubits.map(hadamard);
     }
     
-    // Measure result
-    let mut first_qubit = qubits[0];
+    // Measure result - destructure to extract first qubit
+    let [mut first_qubit, ..] = qubits;
     measure(&mut first_qubit)
 }
 ```
