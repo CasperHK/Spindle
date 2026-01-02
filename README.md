@@ -91,6 +91,7 @@ fn phase(angle: f64, q: Qubit) -> Qubit;
 // Multi-qubit gates
 fn cnot(control: Qubit, target: Qubit) -> (Qubit, Qubit);
 fn toffoli(c1: Qubit, c2: Qubit, target: Qubit) -> (Qubit, Qubit, Qubit);
+fn multi_controlled_z<const N: usize>(qubits: [Qubit; N]) -> [Qubit; N];
 
 // Measurement
 fn measure(q: &mut Qubit) -> ClassicalBit;
@@ -130,9 +131,12 @@ fn quantum_teleportation(
 ### Example: Grover's Search Algorithm
 
 ```rust
-fn grovers_search<const N: usize>(oracle: impl Fn(&[Qubit; N]) -> [Qubit; N]) -> ClassicalBit {
+fn grovers_search<const N: usize>(oracle: impl Fn(&[Qubit; N]) -> [Qubit; N]) -> ClassicalBit 
+where
+    [(); N - 1]: Sized  // Compile-time constraint: N must be at least 1
+{
     // Initialize qubits in superposition
-    let qubits: [Qubit; N] = array_init(|| Qubit::new());
+    let qubits: [Qubit; N] = std::array::from_fn(|_| Qubit::new());
     let qubits = qubits.map(hadamard);
     
     // Apply Grover iterations
