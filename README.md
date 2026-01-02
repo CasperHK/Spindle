@@ -38,8 +38,8 @@ Measurements require mutable borrows, making it clear when superposition is dest
 ```rust
 fn measure_example() {
     let mut q = Qubit::new();
-    hadamard(&q);                    // immutable borrow - preserves superposition
-    let result = measure(&mut q);    // mutable borrow - collapses state
+    let q = hadamard(q);                 // Move ownership - applies gate
+    let result = measure(&mut q);        // Mutable borrow - collapses state
     // q is now in a classical state
 }
 ```
@@ -77,7 +77,7 @@ trait UnitaryGate {
 - `Qubit`: A single quantum bit in superposition
 - `ClassicalBit`: A measured qubit, stored classically
 - `EntangledPair`: Two qubits in an entangled state
-- `QuantumRegister<N>`: A fixed-size array of qubits
+- `QuantumRegister<N>`: A collection of N independently created qubits (no cloning)
 - `QuantumCircuit`: A composable quantum computation
 
 ### Quantum Operations
@@ -140,9 +140,9 @@ fn quantum_teleportation(
 ```rust
 // Conceptual Spindle code showing ownership principles
 fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> ClassicalBit {
-    // Initialize qubits in superposition
-    let qubits = [Qubit::new(); N];
-    let qubits = qubits.map(hadamard);
+    // Initialize qubits in superposition - each qubit is independently created
+    let qubits = QuantumRegister::new(N);  // Creates N qubits without cloning
+    let qubits = qubits.apply_to_each(hadamard);  // Applies gate to each qubit in place
     
     // Apply Grover iterations
     let iterations = optimal_grover_iterations(N);
@@ -153,15 +153,15 @@ fn grovers_search<const N: usize>(oracle: impl Fn([Qubit; N]) -> [Qubit; N]) -> 
         qubits = oracle(qubits);
         
         // Diffusion operator
-        qubits = qubits.map(hadamard);
-        qubits = qubits.map(pauli_x);
+        qubits = qubits.apply_to_each(hadamard);
+        qubits = qubits.apply_to_each(pauli_x);
         qubits = multi_controlled_z(qubits);
-        qubits = qubits.map(pauli_x);
-        qubits = qubits.map(hadamard);
+        qubits = qubits.apply_to_each(pauli_x);
+        qubits = qubits.apply_to_each(hadamard);
     }
     
     // Measure result - destructure to extract first qubit
-    let [mut first_qubit, ..] = qubits;
+    let [mut first_qubit, ..] = qubits.into_array();
     measure(&mut first_qubit)
 }
 ```
